@@ -48,6 +48,36 @@ router.post("/sign-up", async (req, res) => {
   res.status(201).send({ jwt: jwt })
 });
 
+router.post('/sign-in', function(req, res) {
+  // get email and password from body
+  const { email, password } = req.body
+  
+  // find user with that email address
+  const user = usersDb.find(user => user.email == email)
+  if (!user) {
+    // if none exists return error 401 - unauthorized
+    res.status(401).send()
+    return
+  }
+
+  
+  // get the hashedPassword from the user object and compare it to the password from body
+  const hashedPassword = user.password
+  const isValid = bcrypt.compareSync(password, hashedPassword)
+
+  if (!isValid) {
+    // if they dont match return error 401 - unauthorized
+    res.status(401).send()
+    return
+  }
+
+  // generate a JWT for this user's ID
+  const jwt = utils.generateJWT(user.id)
+
+  // return the JWT so they can start making authenticated requests
+  res.status(200).send({ jwt: jwt })
+})
+
 
 module.exports = router;   // we need to export this router to implement it inside our server.js file
 
