@@ -19,7 +19,7 @@ router.post("/sign-up", async (req, res) => {
   const existingUser = usersDb.find(user => user.email == email)
   if (existingUser) {
     // if there is, return an error
-    res.status(400).send('User already exists!')
+    res.status(400).send({ error: 'User already exists!' })
     return
   }
 
@@ -56,7 +56,7 @@ router.post('/sign-in', function(req, res) {
   const user = usersDb.find(user => user.email == email)
   if (!user) {
     // if none exists return error 401 - unauthorized
-    res.status(401).send()
+    res.status(401).send({ error: 'unauthorized' })
     return
   }
 
@@ -67,7 +67,7 @@ router.post('/sign-in', function(req, res) {
 
   if (!isValid) {
     // if they dont match return error 401 - unauthorized
-    res.status(401).send()
+    res.status(401).send({ error: 'unauthorized' })
     return
   }
 
@@ -76,6 +76,40 @@ router.post('/sign-in', function(req, res) {
 
   // return the JWT so they can start making authenticated requests
   res.status(200).send({ jwt: jwt })
+})
+
+// only allow access if the request contained a header with a valid json webtoken
+function authMiddleware (request, response, next) {
+  // get jwt from headers
+  const jwt = request.header('authorization')
+  // validate JWT
+  const userId = utils.decodeJWT(jwt)
+  if (!userId) {
+  //   if invalid, return status 401 - unauthorized
+    response.status(401).send({ error: 'unauthorized' })
+    return
+  }
+  request.userId = userId 
+  next()
+}
+
+// only allow access if the request contained a header with a valid json webtoken
+// return the users id and email
+router.get('/auth', authMiddleware, function (req, response) {
+
+  // find user with the ID that's in the JWT
+  const user = usersDb.find(user => user.id == req.userId)
+
+  if (!user) {
+    response.status(404).send({ error: 'not found' })
+    return
+  }
+
+  // return a json object with that id and the user's email
+  response.send({
+    id: user.id,
+    email: user.email
+  })
 })
 
 
